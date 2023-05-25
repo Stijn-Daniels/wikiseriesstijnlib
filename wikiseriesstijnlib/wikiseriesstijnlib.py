@@ -50,6 +50,7 @@ LOGGER_BASENAME = '''wikiseriesstijnlib'''
 LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
+
 def search_series(name):
     api_url = 'https://en.wikipedia.org/w/api.php'
     limit = 10
@@ -59,14 +60,14 @@ def search_series(name):
                   'formatversion': '1',
                   'namespace': '0',
                   'limit': limit,
-                   'search': term}
-    search_response = requests.get(api_url, params=parameters)
+                  'search': term}
+    search_response = requests.get(api_url, params=parameters, timeout=5)
     series_url = search_response.json()[3][0]
-    series_response = requests.get(series_url)
+    series_response = requests.get(series_url, timeout=5)
     soup = Bfs(series_response.text, features="html.parser")
     season_table = soup.find('table', class_='wikitable')
     seasons_numbers = [item.text for item in season_table.find_all('span', class_='nowrap')]
-    season_episodes = soup.find_all('table', class_='wikiepisodetable') 
-    return {f'Season {key}': [entry.text.split('"')[1] 
-                              for entry in value.find_all('td', class_='summary')] 
+    season_episodes = soup.find_all('table', class_='wikiepisodetable')
+    return {f'Season {key}': [entry.text.split('"')[1]
+                              for entry in value.find_all('td', class_='summary')]
             for key, value in zip(seasons_numbers, season_episodes)}
