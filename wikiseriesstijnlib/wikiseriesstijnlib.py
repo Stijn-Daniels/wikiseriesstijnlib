@@ -34,7 +34,6 @@ Main code for wikiseriesstijnlib.
 import logging
 import requests
 from bs4 import BeautifulSoup as Bfs
-from pprint import pprint
 
 __author__ = '''Stijn Daniels <stijn.githubemail@gmail.com>'''
 __docformat__ = '''google'''
@@ -46,39 +45,28 @@ __maintainer__ = '''Stijn Daniels'''
 __email__ = '''<stijn.githubemail@gmail.com>'''
 __status__ = '''Development'''  # "Prototype", "Development", "Production".
 
-
 # This is the main prefix used for logging
 LOGGER_BASENAME = '''wikiseriesstijnlib'''
 LOGGER = logging.getLogger(LOGGER_BASENAME)
 LOGGER.addHandler(logging.NullHandler())
 
-series_overview = []
-name = input('what series do you want to search? ')
-api_url = 'https://en.wikipedia.org/w/api.php'
-limit = 10
-term = f'List_of_{name}_episodes'
-parameters = {'action': 'opensearch',
-              'format': 'json',
-              'formatversion': '1',
-              'namespace': '0',
-              'limit': limit,
-              'search': term}
-response = requests.get(api_url, params=parameters, timeout=5)
-url = response.json()[3][0]
-series_response = requests.get(url, timeout=5)
-soup = Bfs(series_response.text, features="html.parser")
-tables = soup.find_all('table', {'class': 'wikitable'})[0]
-try:
-    seasons = [entry.text for entry in tables.find_all('span', {'class': 'nowrap'})]
-except Exception as e:
-    print(e)
-episodetables = soup.find_all('table', {'class': 'wikiepisodetable'})
-for season, episodetable in enumerate(episodetables):
-    try:
-        episodelist = [episode.text.split('"')[1] for episode in episodetable.find_all('td', {'class': 'summary'})]
-        insert = {'season_name': seasons[season], 'season_episodes': episodelist}
-        series_overview.append(insert)
-    except Exception as e:
-        print(f'something went wrong, error {e}, season = {season}, table = {episodetable}')
-
-pprint(series_overview)
+def search_series(name):
+    api_url = 'https://en.wikipedia.org/w/api.php'
+    limit = 10
+    term = f'List_of_{name}_episodes'
+    parameters = {'action': 'opensearch',
+                  'format': 'json',
+                  'formatversion': '1',
+                  'namespace': '0',
+                  'limit': limit,
+                   'search': term}
+    search_response = requests.get(api_url, params=parameters)
+    series_url = search_response.json()[3][0]
+    series_response = requests.get(series_url)
+    soup = Bfs(series_response.text, features="html.parser")
+    season_table = soup.find('table', class_='wikitable')
+    seasons_numbers = [item.text for item in season_table.find_all('span', class_='nowrap')]
+    season_episodes = soup.find_all('table', class_='wikiepisodetable') 
+    return {f'Season {key}': [entry.text.split('"')[1] 
+                              for entry in value.find_all('td', class_='summary')] 
+            for key, value in zip(seasons_numbers, season_episodes)}
